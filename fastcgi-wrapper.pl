@@ -78,6 +78,7 @@ sub request_loop {
                 close(CHILD_RD);
                 close(CHILD_WR);
                 print PARENT_WR $stdin_passthrough;
+                close(PARENT_WR);
 
                 while(my $s = <PARENT_RD>) { print $s; }
                 close(PARENT_RD);
