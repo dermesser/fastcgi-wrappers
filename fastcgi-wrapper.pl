@@ -65,6 +65,7 @@ sub request_loop {
         ){
             pipe(CHILD_RD, PARENT_WR);
             pipe(PARENT_RD, CHILD_WR);
+            pipe(PARENT_ERR_RD, CHILD_ERR_WR);
 
             my $pid = fork();
             unless(defined($pid)) {
@@ -77,11 +78,15 @@ sub request_loop {
                 # Avoid waiting for eof on pipe!!!
                 close(CHILD_RD);
                 close(CHILD_WR);
+                close(CHILD_ERR_WR);
+
                 print PARENT_WR $stdin_passthrough;
                 close(PARENT_WR);
 
                 while(my $s = <PARENT_RD>) { print $s; }
                 close(PARENT_RD);
+                while(my $s = <PARENT_ERR_RD>) { print STDERR $s; }
+                close(PARENT_ERR_RD);
 
                 waitpid($pid, 0);
             } else {
@@ -96,9 +101,11 @@ sub request_loop {
                 # Avoid waiting for eof on pipe!!!
                 close(PARENT_RD);
                 close(PARENT_WR);
+                close(PARENT_ERR_RD);
 
                 syscall(&SYS_dup2, fileno(CHILD_RD), 0);
                 syscall(&SYS_dup2, fileno(CHILD_WR), 1);
+                syscall(&SYS_dup2, fileno(CHILD_ERR_WR), 2);
                 exec($req_params{SCRIPT_FILENAME});
                 die("exec failed");
             }
