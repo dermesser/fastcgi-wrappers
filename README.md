@@ -47,7 +47,7 @@ WantedBy=network.target
 
 and a socket unit,
 
-```init
+```ini
 Description = "FCGI socket for fcgi-pl (%i)"
 
 [Socket]
