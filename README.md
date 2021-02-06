@@ -24,6 +24,62 @@ It rather works like the PHP binaries compiled for FastCGI use (php-cgi, for exa
 FastCGI requests, reads the file described in the `$ENV{SCRIPT_FILENAME}` variable and `eval()`uates
 it. This mechanism does not involve any forking (as already mentioned), making it quite cheap.
 
+## systemd configuration
+
+For `perl-cgi-wrapper`:
+
+```ini
+# fcgi-pl.service
+
+[Unit]
+Description=Perl CGI scripts for <user>
+
+[Service]
+Type=exec
+User=<user>
+StandardInput=socket
+ExecStart=/usr/bin/perl /path/to/fastcgi-wrappers/perl-cgi-wrapper.pl
+ExecStop=/bin/kill -TERM $MAINPID
+
+[Install]
+WantedBy=network.target
+```
+
+and a socket unit,
+
+```init
+Description = "FCGI socket for fcgi-pl (%i)"
+
+[Socket]
+ListenStream = 127.0.0.1:8999
+Accept = false
+
+[Install]
+WantedBy = sockets.target fcgi-pl.service
+```
+
+Note that for this to work, use the standard way of `STDIN` in the `main()`
+function. Start the script using:
+
+```bash
+sudo systemctl start fcgi-pl.service
+```
+
+## `nginx` configuration
+
+If you use IP sockets with the above configuration:
+
+```nginx
+location /util/ {
+        fastcgi_pass   127.0.0.1:8999;
+        fastcgi_index  index.pl;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+        include        fastcgi_params;
+}
+```
+
+You can alternatively use UNIX domain sockets.
+
 ## `mod_fcgid` configuration
 
 A working configuration could look like the following example:
